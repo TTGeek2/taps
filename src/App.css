@@ -1,0 +1,167 @@
+#root {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 2rem;
+  text-align: center;
+}
+
+.logo {
+  height: 6em;
+  padding: 1.5em;
+  will-change: filter;
+  transition: filter 300ms;
+}
+.logo:hover {
+  filter: drop-shadow(0 0 2em #646cffaa);
+}
+.logo.react:hover {
+  filter: drop-shadow(0 0 2em #61dafbaa);
+}
+
+@keyframes logo-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  a:nth-of-type(2) .logo {
+    animation: logo-spin infinite 20s linear;
+  }
+}
+
+.card {
+  padding: 2em;
+}
+
+.read-the-docs {
+  color: #888;
+}
+
+.App {
+  text-align: center;
+  padding: 20px;
+  background-color: #282c34;
+  min-height: 100vh;
+  color: white;
+}
+
+.game-container {
+  display: flex;
+  justify-content: center;
+  margin: 20px 0;
+}
+
+canvas {
+  background-color: #f0f0f0;
+  border-radius: 8px;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+}
+
+.instructions {
+  max-width: 600px;
+  margin: 0 auto;
+  padding: 20px;
+  background-color: #1a1c20;
+  border-radius: 8px;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+}
+
+.instructions h2 {
+  color: #61dafb;
+  margin-bottom: 15px;
+}
+
+.instructions ul {
+  text-align: left;
+  line-height: 1.6;
+}
+
+.instructions li {
+  margin-bottom: 10px;
+  color: #e0e0e0;
+}
+
+.game-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+}
+
+.game-controls {
+  display: flex;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.restart-button,
+.skip-button {
+  padding: 10px 20px;
+  font-size: 16px;
+  font-weight: bold;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.restart-button {
+  background-color: #4CAF50;
+}
+
+.restart-button:hover {
+  background-color: #45a049;
+}
+
+.restart-button:active {
+  background-color: #3d8b40;
+}
+
+.skip-button {
+  background-color: #2196F3;
+}
+
+.skip-button:hover {
+  background-color: #1976D2;
+}
+
+.skip-button:active {
+  background-color: #1565C0;
+}
+
+.game-legend {
+  margin-top: 20px;
+  padding: 15px;
+  background-color: #1a1c20;
+  border-radius: 8px;
+  color: white;
+}
+
+.game-legend h3 {
+  margin: 0 0 10px 0;
+  color: #61dafb;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.legend-color {
+  width: 20px;
+  height: 20px;
+  margin-right: 10px;
+  border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.legend-item span {
+  font-size: 14px;
+  color: #e0e0e0;
+}
