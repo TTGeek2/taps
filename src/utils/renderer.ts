@@ -3,6 +3,19 @@ import { GameState, BarObject, Customer } from '../types/game';
 const PLAYER_SIZE = 30;
 const CUSTOMER_SIZE = 25;
 
+const ANGRY_MESSAGES = [
+  "Taps is a FLOP!",
+  "Worst. Bar. Ever!",
+  "My gran pours better!",
+  "Taps? More like NAPS!",
+  "Service slower than dial-up!",
+  "I've had warmer ice cream!",
+  "Even root beer has more spirit!",
+  "Taps runs on empty!",
+  "This bar is all foam!",
+  "Less Taps, more YAPS!"
+];
+
 export function drawGame(
   ctx: CanvasRenderingContext2D,
   gameState: GameState,
@@ -73,6 +86,80 @@ function drawBarObject(ctx: CanvasRenderingContext2D, obj: BarObject) {
 }
 
 function drawCustomer(ctx: CanvasRenderingContext2D, customer: Customer) {
+  // Draw angry message if mood is at minimum
+  if (customer.mood <= 0 && customer.state === 'waiting' && customer.angryMessage) {
+    // Draw speech bubble with angry message
+    const messageY = 70; // Fixed Y position for message
+    
+    // Draw angry bubble (red tinted)
+    ctx.fillStyle = '#FFE4E1'; // Misty rose color
+    ctx.strokeStyle = '#FF4040'; // Coral red
+    ctx.lineWidth = 2;
+    
+    // Measure text to make bubble the right size
+    ctx.font = 'bold 12px Arial';
+    const textWidth = ctx.measureText(customer.angryMessage).width;
+    const bubbleWidth = textWidth + 20;
+    const bubbleHeight = 25;
+    
+    // Draw bubble with fixed position but connected to moving customer
+    ctx.beginPath();
+    ctx.moveTo(customer.position.x - bubbleWidth/2, messageY);
+    ctx.lineTo(customer.position.x + bubbleWidth/2, messageY);
+    ctx.quadraticCurveTo(customer.position.x + bubbleWidth/2 + 10, messageY, 
+                        customer.position.x + bubbleWidth/2 + 10, messageY + bubbleHeight/2);
+    ctx.quadraticCurveTo(customer.position.x + bubbleWidth/2 + 10, messageY + bubbleHeight, 
+                        customer.position.x + bubbleWidth/2, messageY + bubbleHeight);
+    ctx.lineTo(customer.position.x + 10, messageY + bubbleHeight);
+    
+    // Draw connecting line that follows the customer
+    ctx.lineTo(customer.position.x, customer.position.y - CUSTOMER_SIZE/2);
+    
+    ctx.lineTo(customer.position.x - 10, messageY + bubbleHeight);
+    ctx.lineTo(customer.position.x - bubbleWidth/2, messageY + bubbleHeight);
+    ctx.quadraticCurveTo(customer.position.x - bubbleWidth/2 - 10, messageY + bubbleHeight,
+                        customer.position.x - bubbleWidth/2 - 10, messageY + bubbleHeight/2);
+    ctx.quadraticCurveTo(customer.position.x - bubbleWidth/2 - 10, messageY,
+                        customer.position.x - bubbleWidth/2, messageY);
+    ctx.fill();
+    ctx.stroke();
+
+    // Draw text at fixed position
+    ctx.fillStyle = '#FF0000'; // Red text
+    ctx.textAlign = 'center';
+    ctx.fillText(customer.angryMessage, customer.position.x, messageY + 16);
+    ctx.textAlign = 'left'; // Reset alignment
+  }
+
+  // Draw order bubble if waiting and not at minimum mood
+  if (customer.state === 'waiting' && customer.order && customer.mood > 0) {
+    // Draw mood bar above everything
+    const moodBarY = customer.position.y - 65;
+    ctx.fillStyle = 'white';
+    ctx.fillRect(
+      customer.position.x - 15,
+      moodBarY,
+      30,
+      5
+    );
+    ctx.fillStyle = getMoodColor(customer.mood);
+    ctx.fillRect(
+      customer.position.x - 15,
+      moodBarY,
+      (customer.mood / 100) * 30,
+      5
+    );
+
+    // Add a thin line connecting mood bar to customer
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+    ctx.beginPath();
+    ctx.moveTo(customer.position.x, moodBarY + 5);
+    ctx.lineTo(customer.position.x, customer.position.y - CUSTOMER_SIZE/2);
+    ctx.stroke();
+
+    drawOrderBubble(ctx, customer);
+  }
+
   // Draw body
   ctx.fillStyle = getMoodColor(customer.mood);
   ctx.beginPath();
@@ -105,36 +192,55 @@ function drawCustomer(ctx: CanvasRenderingContext2D, customer: Customer) {
     );
   }
 
-  // Draw mood indicator
-  ctx.fillStyle = 'white';
-  ctx.fillRect(
-    customer.position.x - 15,
-    customer.position.y - 20,
-    30,
-    5
-  );
-  ctx.fillStyle = getMoodColor(customer.mood);
-  ctx.fillRect(
-    customer.position.x - 15,
-    customer.position.y - 20,
-    (customer.mood / 100) * 30,
-    5
-  );
+  // If mood is zero, draw angry eyebrows and steam
+  if (customer.mood <= 0) {
+    // Draw angry eyebrows
+    ctx.strokeStyle = '#000000';
+    ctx.lineWidth = 2;
+    // Left angry eyebrow
+    ctx.beginPath();
+    ctx.moveTo(customer.position.x - 8, customer.position.y - 5);
+    ctx.lineTo(customer.position.x - 3, customer.position.y - 8);
+    ctx.stroke();
+    // Right angry eyebrow
+    ctx.beginPath();
+    ctx.moveTo(customer.position.x + 8, customer.position.y - 5);
+    ctx.lineTo(customer.position.x + 3, customer.position.y - 8);
+    ctx.stroke();
 
-  // Draw order bubble if waiting
-  if (customer.state === 'waiting' && customer.order) {
-    drawOrderBubble(ctx, customer);
+    // Draw steam coming from head (moves with time)
+    const time = Date.now() / 1000;
+    ctx.strokeStyle = 'rgba(255, 0, 0, 0.5)';
+    ctx.lineWidth = 1;
+    for (let i = 0; i < 3; i++) {
+      const offset = i * (Math.PI * 2 / 3);
+      ctx.beginPath();
+      ctx.moveTo(
+        customer.position.x + Math.cos(time * 2 + offset) * 5,
+        customer.position.y - CUSTOMER_SIZE/2 - 5
+      );
+      ctx.quadraticCurveTo(
+        customer.position.x + Math.cos(time * 2 + offset) * 8,
+        customer.position.y - CUSTOMER_SIZE/2 - 15,
+        customer.position.x + Math.cos(time * 2 + offset) * 5,
+        customer.position.y - CUSTOMER_SIZE/2 - 25
+      );
+      ctx.stroke();
+    }
   }
 }
 
 function drawOrderBubble(ctx: CanvasRenderingContext2D, customer: Customer) {
   if (!customer.order) return;
 
+  // Draw the bubble slightly lower than the mood bar
+  const bubbleY = customer.position.y - 30;
+  
   ctx.fillStyle = 'white';
   ctx.beginPath();
   ctx.ellipse(
     customer.position.x + 30,
-    customer.position.y - 30,
+    bubbleY,
     35,
     25,
     0,
@@ -143,20 +249,7 @@ function drawOrderBubble(ctx: CanvasRenderingContext2D, customer: Customer) {
   );
   ctx.fill();
 
-  ctx.font = '10px Arial';
-  ctx.fillStyle = 'black';
-  customer.order.items.forEach((item, index) => {
-    // Draw checkmark or X based on completion status
-    const statusSymbol = item.completed ? '✓' : '○';
-    const itemText = `${statusSymbol} ${item.name}`;
-    ctx.fillText(
-      itemText,
-      customer.position.x + 5,
-      customer.position.y - 40 + (index * 12)
-    );
-  });
-
-  // Draw waiting time indicator
+  // Draw waiting time indicator at the top of the bubble
   const waitingTimePercentage = customer.waitingTime / customer.maxWaitingTime;
   const timeBarWidth = 30;
   const timeBarHeight = 3;
@@ -165,7 +258,7 @@ function drawOrderBubble(ctx: CanvasRenderingContext2D, customer: Customer) {
   ctx.fillStyle = '#ddd';
   ctx.fillRect(
     customer.position.x + 15,
-    customer.position.y - 45,
+    bubbleY - 20,  // Moved up
     timeBarWidth,
     timeBarHeight
   );
@@ -175,10 +268,24 @@ function drawOrderBubble(ctx: CanvasRenderingContext2D, customer: Customer) {
   ctx.fillStyle = barColor;
   ctx.fillRect(
     customer.position.x + 15,
-    customer.position.y - 45,
+    bubbleY - 20,  // Moved up
     Math.min(waitingTimePercentage, 1) * timeBarWidth,
     timeBarHeight
   );
+
+  // Draw order items below the timer
+  ctx.font = '10px Arial';
+  ctx.fillStyle = 'black';
+  customer.order.items.forEach((item, index) => {
+    // Draw checkmark or X based on completion status
+    const statusSymbol = item.completed ? '✓' : '○';
+    const itemText = `${statusSymbol} ${item.name}`;
+    ctx.fillText(
+      itemText,
+      customer.position.x + 5,
+      bubbleY - 5 + (index * 12)  // Adjusted Y position to be below timer
+    );
+  });
 }
 
 function drawBartender(ctx: CanvasRenderingContext2D, gameState: GameState) {

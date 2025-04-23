@@ -1,5 +1,12 @@
 import { GameState, Customer, Order, OrderItem } from '../types/game';
 
+const CUSTOMER_SIZE = 25; // Size of customer avatar
+const CUSTOMER_SPACING = CUSTOMER_SIZE * 2; // Minimum space between customers
+const CUSTOMER_SPAWN_AREA = {
+  start: 100,  // Left boundary for spawning
+  end: 700     // Right boundary for spawning
+};
+
 const CUSTOMER_SPAWN_INTERVAL = 5000; // 5 seconds in milliseconds
 const MOOD_DECAY_RATE = 2; // points per second (reduced from 5 to make it more forgiving)
 const INITIAL_MOOD_RANGE = { min: 50, max: 100 };
@@ -19,6 +26,40 @@ const WAITING_TIME_RANGE = {
 
 const HAIR_COLORS = ['#000000', '#8B4513', '#D4A017', '#800517', '#C0C0C0'];
 const SHIRT_COLORS = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEEAD', '#D4A017'];
+
+const DOOR_POSITION = { x: 50, y: 150 }; // Position of the bar door
+const ANGRY_MOVEMENT_SPEED = 100; // Pixels per second
+const ANGRY_MOVEMENT_RANGE = 20; // How far up/down they move
+
+const ANGRY_MESSAGES = [
+  "Taps is a FLOP!",
+  "Worst. Bar. Ever!",
+  "My gran pours better!",
+  "Taps? More like NAPS!",
+  "Service slower than dial-up!",
+  "I've had warmer ice cream!",
+  "Even root beer has more spirit!",
+  "Taps runs on empty!",
+  "This bar is all foam!",
+  "Less Taps, more YAPS!",
+  "My plant waters faster!",
+  "I've seen better Taps in a sink!",
+  "This bar needs training wheels!",
+  "Did the beer expire in 1922?",
+  "I'd rather drink from a puddle!"
+];
+
+// Bar area boundaries for angry customers
+const BAR_AREA = {
+  left: 600,    // Moved to right side
+  right: 750,   // Right edge near canvas boundary
+  y: 200       // Base Y position for angry customers (lower than regular customers)
+};
+
+const MESSAGE_CHANGE_INTERVAL = {
+  min: 20000,  // Minimum time between message changes (20 seconds)
+  max: 40000   // Maximum time between message changes (40 seconds)
+};
 
 export function updateGameState(prevState: GameState, currentTime: number): GameState {
   const newState = { ...prevState };
@@ -68,25 +109,26 @@ export function tryDeliverOrder(state: GameState, customerId: string): GameState
     // Clear player's inventory
     newState.playerInventory = { type: 'none', name: '' };
 
-    // Stop mood decay for this customer by setting a flag
-    customer.orderInProgress = true;
-
     // Check if all items are completed
     const allCompleted = customer.order.items.every(item => item.completed);
     if (allCompleted) {
       // Convert remaining happiness into cash
       const happinessBonus = Math.floor(customer.mood);
-      newState.money += happinessBonus;
-      
-      // Add base reward
       const baseReward = 20;
-      newState.money += baseReward;
-      
-      // Update score
-      newState.score += baseReward + happinessBonus;
+      const totalReward = baseReward + happinessBonus;
 
-      // Mark customer as served
+      // Update money and score
+      newState.money += totalReward;
+      newState.score += totalReward;
+
+      // Mark customer as served and stop mood decay
       customer.state = 'served';
+      customer.orderInProgress = true;
+
+      console.log(`Order completed! Reward: ${totalReward} (Base: ${baseReward}, Bonus: ${happinessBonus})`);
+    } else {
+      // Stop mood decay while waiting for remaining items
+      customer.orderInProgress = true;
     }
   }
 
@@ -112,18 +154,68 @@ function calculateMaxWaitingTime(order: Order): number {
   return maxTime;
 }
 
+function findAvailablePosition(customers: Customer[]): number | null {
+  // Sort existing customers by x position
+  const sortedCustomers = [...customers]
+    .filter(c => c.state !== 'leaving')
+    .sort((a, b) => a.position.x - b.position.x);
+
+  if (sortedCustomers.length === 0) {
+    // If no customers, return center position
+    return (CUSTOMER_SPAWN_AREA.start + CUSTOMER_SPAWN_AREA.end) / 2;
+  }
+
+  // Check space at the start
+  if (sortedCustomers[0].position.x - CUSTOMER_SPAWN_AREA.start >= CUSTOMER_SPACING) {
+    return CUSTOMER_SPAWN_AREA.start + CUSTOMER_SPACING/2;
+  }
+
+  // Check spaces between customers
+  for (let i = 0; i < sortedCustomers.length - 1; i++) {
+    const gap = sortedCustomers[i + 1].position.x - sortedCustomers[i].position.x;
+    if (gap >= CUSTOMER_SPACING * 1.5) {
+      return sortedCustomers[i].position.x + gap/2;
+    }
+  }
+
+  // Check space at the end
+  const lastCustomer = sortedCustomers[sortedCustomers.length - 1];
+  if (CUSTOMER_SPAWN_AREA.end - lastCustomer.position.x >= CUSTOMER_SPACING) {
+    return lastCustomer.position.x + CUSTOMER_SPACING;
+  }
+
+  return null; // No available position found
+}
+
+function getRandomBarPosition() {
+  return {
+    x: Math.random() * (BAR_AREA.right - BAR_AREA.left) + BAR_AREA.left,
+    y: BAR_AREA.y
+  };
+}
+
+function getRandomAngryMessage(): string {
+  return ANGRY_MESSAGES[Math.floor(Math.random() * ANGRY_MESSAGES.length)];
+}
+
+function getRandomMessageInterval(): number {
+  return Math.random() * (MESSAGE_CHANGE_INTERVAL.max - MESSAGE_CHANGE_INTERVAL.min) + MESSAGE_CHANGE_INTERVAL.min;
+}
+
 function updateCustomer(customer: Customer, deltaTime: number): Customer {
   const updated = { ...customer };
 
   // Update position based on state
   switch (customer.state) {
     case 'entering':
+      // Move down to their waiting position
       updated.position.y = Math.min(customer.position.y + 50 * deltaTime, 150);
       if (updated.position.y >= 150) {
         updated.state = 'waiting';
       }
       break;
     case 'served':
+      // Move up and off screen
       updated.position.y = Math.max(customer.position.y - 50 * deltaTime, -50);
       if (updated.position.y <= -50) {
         updated.state = 'leaving';
@@ -151,6 +243,50 @@ function updateCustomer(customer: Customer, deltaTime: number): Customer {
         customer.initialMood * (1 - MOOD_DECAY_RATE) * Math.pow(0.9, overtime * 10)
       );
     }
+
+    // If mood hits zero and we don't have an angry position yet, assign one and a message
+    if (updated.mood <= 0 && !updated.angryPosition) {
+      updated.angryPosition = getRandomBarPosition();
+      updated.angryMessage = getRandomAngryMessage();
+      updated.lastMessageChange = Date.now();
+    }
+
+    // If already angry, check if it's time to change the message
+    if (updated.mood <= 0 && updated.lastMessageChange) {
+      const timeSinceLastChange = Date.now() - updated.lastMessageChange;
+      const currentInterval = getRandomMessageInterval();
+      
+      if (timeSinceLastChange >= currentInterval) {
+        // Time to change the message
+        let newMessage = getRandomAngryMessage();
+        // Make sure it's different from the current message
+        while (newMessage === updated.angryMessage) {
+          newMessage = getRandomAngryMessage();
+        }
+        updated.angryMessage = newMessage;
+        updated.lastMessageChange = Date.now();
+      }
+    }
+
+    // If we have an angry position, move towards it and do angry movement
+    if (updated.angryPosition) {
+      // Move towards angry position if not close enough
+      if (Math.abs(updated.position.x - updated.angryPosition.x) > 5) {
+        const moveDirection = updated.position.x > updated.angryPosition.x ? -1 : 1;
+        updated.position.x += moveDirection * 100 * deltaTime;
+        // Clamp to target position
+        if (moveDirection === -1 && updated.position.x < updated.angryPosition.x) {
+          updated.position.x = updated.angryPosition.x;
+        } else if (moveDirection === 1 && updated.position.x > updated.angryPosition.x) {
+          updated.position.x = updated.angryPosition.x;
+        }
+      } else {
+        // At angry position, do up/down movement
+        const time = Date.now() / 1000; // Convert to seconds for smoother movement
+        updated.position.x = updated.angryPosition.x;
+        updated.position.y = updated.angryPosition.y + Math.sin(time * ANGRY_MOVEMENT_SPEED / 50) * ANGRY_MOVEMENT_RANGE;
+      }
+    }
   }
 
   return updated;
@@ -158,6 +294,10 @@ function updateCustomer(customer: Customer, deltaTime: number): Customer {
 
 function spawnCustomer(state: GameState) {
   if (state.customers.length >= 5) return; // Max 5 customers at a time
+
+  // Find an available position for the new customer
+  const xPosition = findAvailablePosition(state.customers);
+  if (xPosition === null) return; // No space available
 
   const isAngry = Math.random() < ANGRY_CUSTOMER_CHANCE;
   const initialMood = isAngry
@@ -170,7 +310,7 @@ function spawnCustomer(state: GameState) {
 
   const customer: Customer = {
     id: Date.now().toString(),
-    position: { x: Math.random() * 700 + 50, y: 50 }, // Random x position at top
+    position: { x: xPosition, y: -50 }, // Start above screen
     mood: initialMood,
     initialMood,
     waitingTime: 0,

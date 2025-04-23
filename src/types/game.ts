@@ -13,6 +13,12 @@ export interface Customer {
     hasBeard: boolean;
   };
   orderInProgress: boolean; // Flag to stop mood decay when order is being fulfilled
+  angryPosition?: {
+    x: number;
+    y: number;
+  };
+  angryMessage?: string; // Store the customer's specific angry message
+  lastMessageChange?: number; // Timestamp of last message change
 }
 
 export interface Order {

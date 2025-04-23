@@ -124,30 +124,26 @@ export const GameCanvas = () => {
       if (isClickInObject(x, y, obj)) {
         switch (obj.type) {
           case 'beer-tap':
-            // Pick up a random beer if not holding anything
-            if (gameState.playerInventory.type === 'none') {
-              const randomBeer = BEERS[Math.floor(Math.random() * BEERS.length)];
-              setGameState(prevState => ({
-                ...prevState,
-                playerInventory: {
-                  type: 'beer',
-                  name: randomBeer,
-                },
-              }));
-            }
+            // Always pick up a new beer, regardless of current inventory
+            const randomBeer = BEERS[Math.floor(Math.random() * BEERS.length)];
+            setGameState(prevState => ({
+              ...prevState,
+              playerInventory: {
+                type: 'beer',
+                name: randomBeer,
+              },
+            }));
             break;
           case 'kitchen':
-            // Pick up a random food if not holding anything
-            if (gameState.playerInventory.type === 'none') {
-              const randomFood = FOODS[Math.floor(Math.random() * FOODS.length)];
-              setGameState(prevState => ({
-                ...prevState,
-                playerInventory: {
-                  type: 'food',
-                  name: randomFood,
-                },
-              }));
-            }
+            // Always pick up new food, regardless of current inventory
+            const randomFood = FOODS[Math.floor(Math.random() * FOODS.length)];
+            setGameState(prevState => ({
+              ...prevState,
+              playerInventory: {
+                type: 'food',
+                name: randomFood,
+              },
+            }));
             break;
           case 'serving-area':
             // Clear inventory when placing on serving area
